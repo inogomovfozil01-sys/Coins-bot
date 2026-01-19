@@ -3,15 +3,16 @@ import random
 import sqlite3
 import time
 import html
+import os
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
-# ================= НАСТРОЙКИ =================
-BOT_TOKEN = "8119584524:AAE--Qi96Xbuwz5hFNWyTj6e6JF0VQsnjo8"
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
 ADMINS = [6564196947]
 SHOP_BANK_ID = 6564196947
-
 
 START_COINS = 1000
 DAILY_BONUS = 9000
@@ -25,79 +26,12 @@ COEF_STEP = 0.08
 MAX_COEF = 30.00
 MAX_COINS = 1_000_000_000_000
 
-def update_coins(tg_id, amount):
-    users_sql.execute("SELECT coins FROM users WHERE tg_id=?", (tg_id,))
-    row = users_sql.fetchone()
-    if not row:
-        return
-
-    current = row[0]
-    new_balance = current + amount
-    reached_limit = False
-
-    if new_balance < 0:
-        new_balance = 0
-
-    if new_balance > MAX_COINS:
-        new_balance = MAX_COINS
-        reached_limit = True
-
-    users_sql.execute(
-        "UPDATE users SET coins=? WHERE tg_id=?",
-        (new_balance, tg_id)
-    )
-    users_db.commit()
-
-    return reached_limit
-
-bmwpower_used = set()
-bmwpower_new_year_used = set()
-
-
-SHOP_ITEMS = {
-    # ===== ТИТУЛЫ =====
-    1: {"name": "👑 Титул «Король» (+1 защита от бомбы)", "price": 400_000, "type": "title", "value": "👑 Король"},
-    2: {"name": "⚔️ Титул «Воин» (+1 защита от бомбы)", "price": 700_000, "type": "title", "value": "⚔️ Воин"},
-    3: {"name": "💰 Титул «Богатей» (+2 защиты от бомб)", "price": 25_000_000, "type": "title", "value": "💰 Богатей"},
-    4: {"name": "⭐️ Титул «Легенда» (+2 защиты от бомб)", "price": 50_000_000, "type": "title", "value": "⭐️Легенда"},
-    5: {"name": "☠️ Титул «Босс» (+5 защит от бомб)", "price": 250_000_000, "type": "title", "value": "☠️ Босс"},
-    6: {"name": "🎮 Титул «Владелец» (+6 защит от бомб)", "price": 2_000_000_000, "type": "title", "value": "🎮 Владелец"},
-    24: {"name": "🎮 Титул  «Рыцарь» ( +7 защит от бомб)", "price": 2_000_000_000, "type": "title", "value": "🎮 Рыцарь"},
-    
-
-    # ===== VIP =====
-    7: {"name": "⭐ VIP на 7 дней (x1.35 к выигрышу + защита)", "price": 300_000_000, "type": "vip", "value": 7},
-    8: {"name": "🔥 VIP на 30 дней (x1.35 к выигрышу + защита)", "price": 1_200_000_000, "type": "vip", "value": 30},
-    9: {"name": "💎 VIP на 90 дней (x1.5 к выигрышу + защита)", "price": 3_000_000_000, "type": "vip", "value": 90},
-
-    13: {"name": "🏅 +100 рейтинга", "price": 75_000_000, "type": "rating", "value": 100},
-    14: {"name": "🏅 +500 рейтинга", "price": 300_000_000, "type": "rating", "value": 500},
-
-    # ===== КЕЙСЫ =====
-    15: {"name": "🎁 Малый кейс", "price": 10_000_000, "type": "case", "value": "small"},
-    16: {"name": "🎁 Большой кейс", "price": 50_000_000, "type": "case", "value": "big"},
-    17: {"name": "🎁 Легендарный кейс", "price": 250_000_000, "type": "case", "value": "legend"},
-    18: {"name": "🎁 GOD кейс", "price": 1_000_000_000, "type": "case", "value": "god"},
-
-    # ===== COINS =====
-    19: {"name": "💰 +10.000.000 Coins", "price": 9_500_000, "type": "coins", "value": 10_000_000},
-    20: {"name": "💰 +50.000.000 Coins", "price": 45_000_000, "type": "coins", "value": 50_000_000},
-    21: {"name": "💰 +250.000.000 Coins", "price": 220_000_000, "type": "coins", "value": 250_000_000},
-
-    # ===== ЭКСКЛЮЗИВ =====
-    22: {"name": "👹 Титул «Император» (+8 защит от бомб)", "price": 10_000_000_000, "type": "title", "value": "👹 Император"},
-    23: {"name": "👽 Титул «Бог Игры» (+10 защит от бомб)", "price": 50_000_000_000, "type": "title", "value": "👽 Бог Игры"},
-}
-
-
-
-
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 
-# ===== НАСТРОЙКИ =====
-BLACKLIST = {5826716619, 8099245004}        # {user_id: username}
+
+BLACKLIST = {}
 
 BLOCK_TEXT = (
     "🚫 <b>ДОСТУП ЗАКРЫТ</b>\n\n"
@@ -106,7 +40,6 @@ BLOCK_TEXT = (
     "📩 По вопросам разблокировки обращайся к администратору."
 )
 
-# ===================== БЛОК ДЛЯ ЗАБЛОКИРОВАННЫХ =====================
 
 @dp.message(F.from_user.id.in_(BLACKLIST))
 async def blacklist_guard(message: Message):
@@ -117,8 +50,6 @@ async def blacklist_guard(message: Message):
 async def blacklist_guard_callback(call: CallbackQuery):
     await call.answer("🚫 Ты в чёрном списке", show_alert=True)
 
-
-# ===================== БЛОК / РАЗБЛОК ОТВЕТОМ НА СООБЩЕНИЕ =====================
 
 @dp.message(F.text == "Блок", F.reply_to_message)
 async def admin_block_user(message: Message):
@@ -155,8 +86,6 @@ async def admin_unblock_user(message: Message):
         await message.reply("❌ Этот пользователь не в чёрном списке")
 
 
-# ===================== СПИСОК ЗАБЛОКИРОВАННЫХ =====================
-
 @dp.message(F.text == "Список блок")
 async def admin_blacklist(message: Message):
     if message.from_user.id not in ADMINS:
@@ -171,8 +100,6 @@ async def admin_blacklist(message: Message):
         await message.reply(text, parse_mode="HTML")
 
 
-# ===================== ЗАЩИТА ПЕРЕВОДОВ =====================
-
 async def coins_transfer_guard(message: Message, target_user_id: int):
     if message.from_user.id in BLACKLIST:
         await message.reply("🚫 Ты в чёрном списке и не можешь переводить коины.")
@@ -183,6 +110,42 @@ async def coins_transfer_guard(message: Message, target_user_id: int):
         return False
 
     return True
+
+
+SHOP_ITEMS = {
+    # ===== ТИТУЛЫ =====
+    1: {"name": "👑 Титул «Король» (+1 защита от бомбы)", "price": 400_000, "type": "title", "value": "👑 Король"},
+    2: {"name": "⚔️ Титул «Воин» (+1 защита от бомбы)", "price": 700_000, "type": "title", "value": "⚔️ Воин"},
+    3: {"name": "💰 Титул «Богатей» (+2 защиты от бомб)", "price": 25_000_000, "type": "title", "value": "💰 Богатей"},
+    4: {"name": "⭐️ Титул «Легенда» (+2 защиты от бомб)", "price": 50_000_000, "type": "title", "value": "⭐️Легенда"},
+    5: {"name": "☠️ Титул «Босс» (+5 защит от бомб)", "price": 250_000_000, "type": "title", "value": "☠️ Босс"},
+    6: {"name": "🎮 Титул «Владелец» (+6 защит от бомб)", "price": 2_000_000_000, "type": "title", "value": "🎮 Владелец"},
+    24: {"name": "🎮 Титул  «Рыцарь» ( +7 защит от бомб)", "price": 2_000_000_000, "type": "title", "value": "🎮 Рыцарь"},
+    
+
+    # ===== VIP =====
+    7: {"name": "⭐ VIP на 7 дней (x1.35 к выигрышу + защита)", "price": 300_000_000, "type": "vip", "value": 7},
+    8: {"name": "🔥 VIP на 30 дней (x1.35 к выигрышу + защита)", "price": 1_200_000_000, "type": "vip", "value": 30},
+    9: {"name": "💎 VIP на 90 дней (x1.5 к выигрышу + защита)", "price": 3_000_000_000, "type": "vip", "value": 90},
+
+    13: {"name": "🏅 +100 рейтинга", "price": 75_000_000, "type": "rating", "value": 100},
+    14: {"name": "🏅 +500 рейтинга", "price": 300_000_000, "type": "rating", "value": 500},
+
+    # ===== КЕЙСЫ =====
+    15: {"name": "🎁 Малый кейс", "price": 10_000_000, "type": "case", "value": "small"},
+    16: {"name": "🎁 Большой кейс", "price": 50_000_000, "type": "case", "value": "big"},
+    17: {"name": "🎁 Легендарный кейс", "price": 250_000_000, "type": "case", "value": "legend"},
+    18: {"name": "🎁 GOD кейс", "price": 1_000_000_000, "type": "case", "value": "god"},
+
+    # ===== COINS =====
+    19: {"name": "💰 +10.000.000 Coins", "price": 9_500_000, "type": "coins", "value": 10_000_000},
+    20: {"name": "💰 +50.000.000 Coins", "price": 45_000_000, "type": "coins", "value": 50_000_000},
+    21: {"name": "💰 +250.000.000 Coins", "price": 220_000_000, "type": "coins", "value": 250_000_000},
+
+    # ===== ЭКСКЛЮЗИВ =====
+    22: {"name": "👹 Титул «Император» (+8 защит от бомб)", "price": 10_000_000_000, "type": "title", "value": "👹 Император"},
+    23: {"name": "👽 Титул «Бог Игры» (+10 защит от бомб)", "price": 50_000_000_000, "type": "title", "value": "👽 Бог Игры"},
+}
 
 
 def escape_html_safe(text: str) -> str:
@@ -1470,3 +1433,4 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
