@@ -26,6 +26,9 @@ COEF_STEP = 0.08
 MAX_COEF = 30.00
 MAX_COINS = 1_000_000_000_000
 
+bmwpower_used = set()
+bmwpower_new_year_used = set()
+
 
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
@@ -191,6 +194,31 @@ bot.send_message = safe_send_message
 Message.answer = safe_answer
 Message.reply = safe_reply
 
+def update_coins(tg_id, amount):
+    users_sql.execute("SELECT coins FROM users WHERE tg_id=?", (tg_id,))
+    row = users_sql.fetchone()
+    if not row:
+        return False
+
+    current = row[0]
+    new_balance = current + amount
+
+    reached_limit = False
+    if new_balance < 0:
+        new_balance = 0
+
+    if new_balance > MAX_COINS:
+        new_balance = MAX_COINS
+        reached_limit = True
+
+    users_sql.execute(
+        "UPDATE users SET coins=? WHERE tg_id=?",
+        (new_balance, tg_id)
+    )
+    users_db.commit()
+    return reached_limit
+
+
 
 
 
@@ -263,6 +291,14 @@ users_sql.execute("""
 CREATE TABLE IF NOT EXISTS user_rating (
     tg_id INTEGER PRIMARY KEY,
     rating INTEGER
+)
+""")
+users_db.commit()
+
+users_sql.execute("""
+CREATE TABLE IF NOT EXISTS user_insurance (
+    tg_id INTEGER PRIMARY KEY,
+    count INTEGER
 )
 """)
 users_db.commit()
@@ -1433,4 +1469,5 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
+
 
