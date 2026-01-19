@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import asyncio
 import random
+import aiogram
 import sqlite3
 import time
 import html
@@ -10,6 +11,7 @@ import logging
 from pathlib import Path
 
 # aiogram (v3) — убедитесь, что установили зависимость (см. requirements.txt)
+from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 # ------- Настройка логирования -------
