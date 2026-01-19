@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 
 # aiogram (v3) — убедитесь, что установили зависимость (см. requirements.txt)
-from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 
 # ------- Настройка логирования -------
@@ -1235,3 +1234,4 @@ if __name__ == "__main__":
         logger.info("Остановка бота")
     except Exception as e:
         logger.exception("Ошибка в боте: %s", e)
+
