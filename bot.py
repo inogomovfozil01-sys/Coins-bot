@@ -1,4 +1,3 @@
-
 import aiogram
 import asyncio
 import random
@@ -95,11 +94,12 @@ SHOP_ITEMS = {
 
 
 
-bot = Bot(BOT_TOKEN)
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 # ===== НАСТРОЙКИ =====
-BLACKLIST = {5826716619, 8099245004}        # {user_id: username}
+# Переведено в dict, т.к. код присваивает username по ключу в админ-командах
+BLACKLIST = {}        # {user_id: username}
 
 BLOCK_TEXT = (
     "🚫 <b>ДОСТУП ЗАКРЫТ</b>\n\n"
@@ -110,19 +110,19 @@ BLOCK_TEXT = (
 
 # ===================== БЛОК ДЛЯ ЗАБЛОКИРОВАННЫХ =====================
 
-@dp.message(F.from_user.id.in_(BLACKLIST))
+@dp.message.register(F.from_user.id.in_(BLACKLIST))
 async def blacklist_guard(message: Message):
     await message.reply(BLOCK_TEXT, parse_mode="HTML")
 
 
-@dp.callback_query(F.from_user.id.in_(BLACKLIST))
+@dp.callback_query.register(F.from_user.id.in_(BLACKLIST))
 async def blacklist_guard_callback(call: CallbackQuery):
     await call.answer("🚫 Ты в чёрном списке", show_alert=True)
 
 
 # ===================== БЛОК / РАЗБЛОК ОТВЕТОМ НА СООБЩЕНИЕ =====================
 
-@dp.message(F.text == "Блок", F.reply_to_message)
+@dp.message.register(F.text == "Блок", F.reply_to_message)
 async def admin_block_user(message: Message):
     if message.from_user.id not in ADMINS:
         return
@@ -139,7 +139,7 @@ async def admin_block_user(message: Message):
     )
 
 
-@dp.message(F.text == "Разблок", F.reply_to_message)
+@dp.message.register(F.text == "Разблок", F.reply_to_message)
 async def admin_unblock_user(message: Message):
     if message.from_user.id not in ADMINS:
         return
@@ -159,7 +159,7 @@ async def admin_unblock_user(message: Message):
 
 # ===================== СПИСОК ЗАБЛОКИРОВАННЫХ =====================
 
-@dp.message(F.text == "Список блок")
+@dp.message.register(F.text == "Список блок")
 async def admin_blacklist(message: Message):
     if message.from_user.id not in ADMINS:
         return
@@ -262,7 +262,6 @@ CREATE TABLE IF NOT EXISTS games (
     active INTEGER
 )
 """)
-
 
 games_db.commit()
 
@@ -378,7 +377,7 @@ def get_top_rating(limit=10):
     return users_sql.fetchall()
 
 
-@dp.message(F.text.lower().in_(["топ", "топ участники", "топ10"]))
+@dp.message.register(F.text.lower().in_(["топ", "топ участники", "топ10"]))
 async def top_users(message: Message):
     top = get_top_users(10)
 
@@ -403,7 +402,7 @@ async def top_users(message: Message):
     await message.answer(text, parse_mode="HTML")
     
     
-@dp.message(F.text.lower().in_(["рейтинг", "мой рейтинг"]))
+@dp.message.register(F.text.lower().in_(["рейтинг", "мой рейтинг"]))
 async def my_rating(message: Message):
     ensure_user(message.from_user)
     rating = get_rating(message.from_user.id)
@@ -416,7 +415,7 @@ async def my_rating(message: Message):
 
 
     
-@dp.message(F.text.lower().in_(["топрейтинг", "топ рейтинг", "топ скилл"]))
+@dp.message.register(F.text.lower().in_(["топрейтинг", "топ рейтинг", "топ скилл"]))
 async def top_rating(message: Message):
     top = get_top_rating(10)
 
@@ -567,7 +566,7 @@ def reveal_result_keyboard(bombs, opened):
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-@dp.message(F.text.startswith("/start"))
+@dp.message.register(F.text.startswith("/start"))
 async def start(message: Message):
     ensure_user(message.from_user)
     await message.reply(
@@ -609,7 +608,7 @@ def get_user_title(tg_id):
     return row[0] if row else "Без титула"
 
 
-@dp.message(F.text.lower().in_(["б", "баланс"]))
+@dp.message.register(F.text.lower().in_(["б", "баланс"]))
 async def balance(message: Message):
     ensure_user(message.from_user)
     data = get_user(message.from_user.id)
@@ -631,7 +630,7 @@ async def balance(message: Message):
 
     
 
-@dp.message(F.text.lower() == "мой профиль")
+@dp.message.register(F.text.lower() == "мой профиль")
 async def user_profile(message: Message):
     user = message.from_user
     ensure_user(user)
@@ -655,7 +654,7 @@ async def user_profile(message: Message):
 
 
 # ================= PAY ======================
-@dp.message(F.text.startswith("СП"))
+@dp.message.register(F.text.startswith("СП"))
 async def pay(message: Message):
 
     # если отправитель заблокирован
@@ -733,7 +732,7 @@ async def pay(message: Message):
         pass
     
     
-@dp.message(F.text.lower().startswith("мины"))
+@dp.message.register(F.text.lower().startswith("мины"))
 async def start_game(message: Message):
     if not is_group(message):
         return await message.answer("❌ Игра только в группе")
@@ -822,7 +821,7 @@ def get_title_bomb_remove(tg_id):
 
 
 
-@dp.callback_query(F.data.startswith("cell_"))
+@dp.callback_query.register(F.data.startswith("cell_"))
 async def open_cell(call: CallbackQuery):
     game = get_game(call.from_user.id)
     if not game:
@@ -900,7 +899,7 @@ async def open_cell(call: CallbackQuery):
         parse_mode="HTML"
     )
     
-@dp.callback_query(F.data == "take")
+@dp.callback_query.register(F.data == "take")
 async def take(call: CallbackQuery):
     game = get_game(call.from_user.id)
     
@@ -951,7 +950,7 @@ async def take(call: CallbackQuery):
         )
 
 
-@dp.callback_query(F.data == "cancel")
+@dp.callback_query.register(F.data == "cancel")
 async def cancel(call: CallbackQuery):
     game = get_game(call.from_user.id)
 
@@ -977,7 +976,7 @@ def admin_only(message: Message):
 
 
 # 🔍 Профиль игрока
-@dp.message(F.text.lower() == "профиль")
+@dp.message.register(F.text.lower() == "профиль")
 async def admin_profile(message: Message):
     if not admin_only(message):
         return
@@ -1010,7 +1009,7 @@ async def admin_profile(message: Message):
 
 
 # ➕ Добавить Coins
-@dp.message(F.text.startswith("Добавить"))
+@dp.message.register(F.text.startswith("Добавить"))
 async def addcoins(message: Message):
     if not admin_only(message):
         return
@@ -1034,7 +1033,7 @@ async def addcoins(message: Message):
 
 
 # ➖ Снять Coins (с защитой от минуса)
-@dp.message(F.text.startswith("Снять"))
+@dp.message.register(F.text.startswith("Снять"))
 async def removecoins(message: Message):
     if not admin_only(message):
         return
@@ -1063,7 +1062,7 @@ async def removecoins(message: Message):
 
 
 # ⚙ Установить точный баланс
-@dp.message(F.text.startswith("Баланс"))
+@dp.message.register(F.text.startswith("Баланс"))
 async def admin_set_balance(message: Message):
     if not admin_only(message):
         return
@@ -1092,7 +1091,7 @@ async def admin_set_balance(message: Message):
 
 
 # 🗑 Обнулить баланс
-@dp.message(F.text.lower() == "обнулить")
+@dp.message.register(F.text.lower() == "обнулить")
 async def admin_reset_balance(message: Message):
     if not admin_only(message):
         return
@@ -1116,7 +1115,7 @@ async def admin_reset_balance(message: Message):
 
 
 # ♻ Сброс активной игры
-@dp.message(F.text.lower() == "сброс")
+@dp.message.register(F.text.lower() == "сброс")
 async def admin_reset_game(message: Message):
     if not admin_only(message):
         return
@@ -1137,7 +1136,7 @@ async def admin_reset_game(message: Message):
         parse_mode="HTML"
     )
     
-@dp.message(F.text.lower().startswith("дать титул"))
+@dp.message.register(F.text.lower().startswith("дать титул"))
 async def admin_give_title(message: Message):
     if not admin_only(message):
         return
@@ -1174,7 +1173,7 @@ async def admin_give_title(message: Message):
     except:
         pass
 
-@dp.message(F.text.lower() == "снять титул")
+@dp.message.register(F.text.lower() == "снять титул")
 async def admin_remove_title(message: Message):
     if not admin_only(message):
         return
@@ -1205,7 +1204,7 @@ async def admin_remove_title(message: Message):
     except:
         pass
     
-@dp.message(F.text.lower().startswith("рейтинг"))
+@dp.message.register(F.text.lower().startswith("рейтинг"))
 async def admin_change_rating(message: Message):
     if message.from_user.id not in ADMINS:
         return
@@ -1257,7 +1256,7 @@ async def admin_change_rating(message: Message):
 
 
 
-@dp.message(F.text == "BMWPOWER")
+@dp.message.register(F.text == "BMWPOWER")
 async def bonus_bmwpower(message: Message):
     ensure_user(message.from_user)
     user_id = message.from_user.id
@@ -1274,7 +1273,7 @@ async def bonus_bmwpower(message: Message):
     )
 
 
-@dp.message(F.text == "BMWPOWER_NEW_YEAR")
+@dp.message.register(F.text == "BMWPOWER_NEW_YEAR")
 async def bonus_new_year(message: Message):
     ensure_user(message.from_user)
     user_id = message.from_user.id
@@ -1294,7 +1293,7 @@ def is_private(message: Message):
     return message.chat.type == "private"
 
 
-@dp.message(F.text.lower().startswith("магазин"))
+@dp.message.register(F.text.lower().startswith("магазин"))
 async def shop(message: Message):
     if not is_private(message):
         return await message.answer("❌ Магазин доступен только в личных сообщениях с ботом")
@@ -1307,7 +1306,7 @@ async def shop(message: Message):
     await message.answer(text, parse_mode="HTML")
 
 
-@dp.message(F.text.lower().startswith("купить"))
+@dp.message.register(F.text.lower().startswith("купить"))
 async def buy_item(message: Message):
     if not is_private(message):
         return await message.answer("❌ Покупки доступны только в личных сообщениях с ботом")
