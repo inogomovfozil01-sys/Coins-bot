@@ -220,8 +220,6 @@ def update_coins(tg_id, amount):
 
 
 
-
-
 users_db = sqlite3.connect("users.db")
 users_sql = users_db.cursor()
 
@@ -438,8 +436,6 @@ async def top_rating(message: Message):
 
 
 
-
-
 # ================= ВСПОМОГАТЕЛЬНО ============
 def is_group(message: Message):
     return message.chat.type in ("group", "supergroup")
@@ -562,6 +558,14 @@ def reveal_result_keyboard(bombs, opened):
             )
         keyboard.append(row)
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+# Безопасный парсер списка чисел из строки "1,2,3" или пустой строки -> []
+def parse_int_list(s):
+    if not s:
+        return []
+    # защититься от лишних запятых/пустых элементов
+    parts = [p for p in s.split(",") if p.strip() != ""]
+    return list(map(int, parts))
 
 
 @dp.message(F.text.startswith("/start"))
@@ -826,8 +830,8 @@ async def open_cell(call: CallbackQuery):
         return
 
     index = int(call.data.split("_")[1])
-    bombs = list(map(int, game[3].split(",")))
-    opened = list(map(int, game[4].split(","))) if game[4] else []
+    bombs = parse_int_list(game[3])
+    opened = parse_int_list(game[4])
     coef = game[5]
 
     if index in opened:
@@ -839,7 +843,11 @@ async def open_cell(call: CallbackQuery):
 
         if vip_can_save(call.from_user.id):
             vip_use_save(call.from_user.id)
-            bombs.remove(index)
+            # удалить бомбу и сохранить
+            try:
+                bombs.remove(index)
+            except ValueError:
+                pass
 
             games_sql.execute(
                 "UPDATE games SET bombs=? WHERE tg_id=?",
@@ -926,6 +934,9 @@ async def take(call: CallbackQuery):
     )
     games_db.commit()
 
+    bombs = parse_int_list(game[3])
+    opened = parse_int_list(game[4])
+
     text = f"🏆 <b>Вы забрали {fmt(win)} Coins</b>"
     if admin_bonus:
         text += "\n🛡 Админ-бонус: x2"
@@ -933,8 +944,8 @@ async def take(call: CallbackQuery):
     await call.message.edit_text(
         text,
         reply_markup=reveal_result_keyboard(
-            list(map(int, game[3].split(","))),
-            list(map(int, game[4].split(","))) if game[4] else []
+            bombs,
+            opened
         ),
         parse_mode="HTML"
     )
@@ -1469,5 +1480,3 @@ async def main():
 if __name__ == "__main__":
 
     asyncio.run(main())
-
-
