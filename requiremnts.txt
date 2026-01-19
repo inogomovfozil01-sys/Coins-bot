@@ -17,6 +17,5 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 yarl==1.22.0
 yt-dlp==2025.12.8
-aiogram==3.4.1
-python-dotenv
+aiogram>=3.0,<4.0
 
